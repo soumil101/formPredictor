@@ -1,3 +1,125 @@
+#&distance from camera, horizontal and vertical displacement
+
+from imutils import paths
+import numpy as np
+import imutils
+import cv2
+
+net = cv2.dnn.readNetFromDarknet('yolov4-tiny.cfg', 'yolov4-tiny.weights')
+classes = []
+with open("coco.names", "r") as f:
+    classes = [line.strip() for line in f.readlines()]
+layer_names = net.getLayerNames()
+output_layers_indices = net.getUnconnectedOutLayers()
+output_layers = []
+for i in output_layers_indices:
+    if isinstance(i, np.ndarray):
+        output_layers.append(layer_names[i[0] - 1])
+    else:
+        output_layers.append(layer_names[i - 1])
+
+# def find_marker(image):
+#     blob = cv2.dnn.blobFromImage(image, 0.00392, (320, 320), (0, 0, 0), True, crop=False)
+#     net.setInput(blob)
+#     outs = net.forward(output_layers)
+#     frame_height, frame_width, channels = image.shape
+#     for out in outs:
+#         for detection in out:
+#             scores = detection[5:]
+#             class_id = np.argmax(scores)
+#             confidence = scores[class_id]
+#             if confidence > 0.5 and classes[class_id] == "cell phone":
+#                 center_x = int(detection[0] * frame_width)
+#                 center_y = int(detection[1] * frame_height)
+#                 w = int(detection[2] * frame_width)
+#                 h = int(detection[3] * frame_height)
+#                 return ((center_x, center_y), (w, h), 0)  
+#     return None
+
+def find_marker(image):
+    blob = cv2.dnn.blobFromImage(image, 0.00392, (320, 320), (0, 0, 0), True, crop=False)
+    net.setInput(blob)
+    outs = net.forward(output_layers)
+    frame_height, frame_width = image.shape[:2]
+    for out in outs:
+        for detection in out:
+            scores = detection[5:]
+            class_id = np.argmax(scores)
+            confidence = scores[class_id]
+            if confidence > 0.5 and classes[class_id] == "cell phone":
+                center_x = int(detection[0] * frame_width)
+                center_y = int(detection[1] * frame_height)
+                w = int(detection[2] * frame_width)
+                h = int(detection[3] * frame_height)
+                return ((center_x, center_y), (w, h), 0)
+    return None
+
+def distance_to_camera(knownWidth, focalLength, perWidth):
+    return (knownWidth * focalLength) / perWidth
+
+KNOWN_DISTANCE = 11.0 
+KNOWN_WIDTH = 2.8 / 12  #inch to feet 
+
+cap = cv2.VideoCapture(0)
+if not cap.isOpened():
+    print("Error: Could not open video capture.")
+    exit()
+
+#focal length initialization
+focalLength = None
+center_x_pixel = None
+center_y_pixel = None
+
+while focalLength is None:
+    ret, image = cap.read()
+    if not ret:
+        print("Failed to grab frame, retrying...")
+        continue
+    if center_x_pixel is None:
+        center_x_pixel = image.shape[1] // 2  #horiz center
+    if center_y_pixel is None:
+        center_y_pixel = image.shape[0] // 2  #vertical center
+    marker = find_marker(image)
+    if marker:
+        focalLength = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH
+
+while True:
+    ret, image = cap.read()
+    if not ret:
+        break
+    marker = find_marker(image)
+    if marker and focalLength is not None:
+        inches = distance_to_camera(KNOWN_WIDTH, focalLength, marker[1][0])
+        horizontal_scaling_factor = KNOWN_WIDTH / marker[1][0]
+        horizontal_displacement = (marker[0][0] - center_x_pixel) * horizontal_scaling_factor
+        vertical_displacement = (marker[0][1] - center_y_pixel) * horizontal_scaling_factor 
+
+        box = cv2.boxPoints(marker)
+        box = np.int0(box)
+        cv2.drawContours(image, [box], -1, (0, 255, 0), 2)
+        cv2.putText(image, f"Distance: {inches / 12:.2f} ft",
+            (image.shape[1] - 700, image.shape[0] - 20),
+            cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
+
+        cv2.putText(image, f"Horiz Disp: {horizontal_displacement:.2f} ft",
+            (image.shape[1] - 700, image.shape[0] - 70),  
+            cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 3)
+
+        cv2.putText(image, f"Vert Disp: {vertical_displacement:.2f} ft",
+            (image.shape[1] - 700, image.shape[0] - 120),  
+            cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 69, 255), 3)
+
+        cv2.imshow("Live Feed", image)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+
+
+#prev attempts
+
+
 # from imutils import paths
 # import numpy as np
 # import imutils
@@ -298,123 +420,3 @@
 
 # cap.release()
 # cv2.destroyAllWindows()
-
-#&distance from camera and horizontal displacement
-
-from imutils import paths
-import numpy as np
-import imutils
-import cv2
-
-# Load the model and classes
-net = cv2.dnn.readNetFromDarknet('yolov4-tiny.cfg', 'yolov4-tiny.weights')
-classes = []
-with open("coco.names", "r") as f:
-    classes = [line.strip() for line in f.readlines()]
-layer_names = net.getLayerNames()
-output_layers_indices = net.getUnconnectedOutLayers()
-output_layers = []
-for i in output_layers_indices:
-    if isinstance(i, np.ndarray):
-        output_layers.append(layer_names[i[0] - 1])
-    else:
-        output_layers.append(layer_names[i - 1])
-
-# def find_marker(image):
-#     blob = cv2.dnn.blobFromImage(image, 0.00392, (320, 320), (0, 0, 0), True, crop=False)
-#     net.setInput(blob)
-#     outs = net.forward(output_layers)
-#     frame_height, frame_width, channels = image.shape
-#     for out in outs:
-#         for detection in out:
-#             scores = detection[5:]
-#             class_id = np.argmax(scores)
-#             confidence = scores[class_id]
-#             if confidence > 0.5 and classes[class_id] == "cell phone":
-#                 center_x = int(detection[0] * frame_width)
-#                 center_y = int(detection[1] * frame_height)
-#                 w = int(detection[2] * frame_width)
-#                 h = int(detection[3] * frame_height)
-#                 return ((center_x, center_y), (w, h), 0)  # Dummy angle
-#     return None
-
-def find_marker(image):
-    blob = cv2.dnn.blobFromImage(image, 0.00392, (320, 320), (0, 0, 0), True, crop=False)
-    net.setInput(blob)
-    outs = net.forward(output_layers)
-    frame_height, frame_width = image.shape[:2]
-    for out in outs:
-        for detection in out:
-            scores = detection[5:]
-            class_id = np.argmax(scores)
-            confidence = scores[class_id]
-            if confidence > 0.5 and classes[class_id] == "cell phone":
-                center_x = int(detection[0] * frame_width)
-                center_y = int(detection[1] * frame_height)
-                w = int(detection[2] * frame_width)
-                h = int(detection[3] * frame_height)
-                return ((center_x, center_y), (w, h), 0)  # Return early once a phone is detected
-    return None
-
-def distance_to_camera(knownWidth, focalLength, perWidth):
-    return (knownWidth * focalLength) / perWidth
-
-KNOWN_DISTANCE = 11.0  # Example known distance
-KNOWN_WIDTH = 2.8 / 12  # Convert width to feet
-
-cap = cv2.VideoCapture(0)
-if not cap.isOpened():
-    print("Error: Could not open video capture.")
-    exit()
-
-# Initialize focal length and center of frame
-focalLength = None
-center_x_pixel = None
-center_y_pixel = None
-
-while focalLength is None:
-    ret, image = cap.read()
-    if not ret:
-        print("Failed to grab frame, retrying...")
-        continue
-    if center_x_pixel is None:
-        center_x_pixel = image.shape[1] // 2  # Find the horizontal center of the frame
-    if center_y_pixel is None:
-        center_y_pixel = image.shape[0] // 2  # Find the vertical center of the frame
-    marker = find_marker(image)
-    if marker:
-        focalLength = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH
-
-# Main processing loop
-while True:
-    ret, image = cap.read()
-    if not ret:
-        break
-    marker = find_marker(image)
-    if marker and focalLength is not None:
-        inches = distance_to_camera(KNOWN_WIDTH, focalLength, marker[1][0])
-        horizontal_scaling_factor = KNOWN_WIDTH / marker[1][0]
-        horizontal_displacement = (marker[0][0] - center_x_pixel) * horizontal_scaling_factor
-        vertical_displacement = (marker[0][1] - center_y_pixel) * horizontal_scaling_factor  # Using the same scaling factor
-
-        box = cv2.boxPoints(marker)
-        box = np.int0(box)
-        cv2.drawContours(image, [box], -1, (0, 255, 0), 2)
-        cv2.putText(image, f"Distance: {inches / 12:.2f} ft",
-            (image.shape[1] - 700, image.shape[0] - 20),
-            cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
-
-        cv2.putText(image, f"Horiz Disp: {horizontal_displacement:.2f} ft",
-            (image.shape[1] - 700, image.shape[0] - 70),  # Increased spacing
-            cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 3)
-
-        cv2.putText(image, f"Vert Disp: {vertical_displacement:.2f} ft",
-            (image.shape[1] - 700, image.shape[0] - 120),  # Further increased spacing
-            cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 69, 255), 3)
-
-        cv2.imshow("Live Feed", image)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-cap.release()
-cv2.destroyAllWindows()

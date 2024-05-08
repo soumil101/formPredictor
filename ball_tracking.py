@@ -3,7 +3,7 @@ import cv2
 
 def track_ball(frame, boxes, class_ids, classes):
     ball_data = {}
-    ball_index = classes.index('cell phone')
+    ball_index = classes.index('basketball')
 
     for i, box in enumerate(boxes):
         if class_ids[i] == ball_index:

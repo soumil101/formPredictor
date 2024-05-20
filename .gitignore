@@ -5,3 +5,4 @@ yolov4-tiny.weights
 yolov4.cfg
 yolov4.weights
 coco.names
+.DS_Store

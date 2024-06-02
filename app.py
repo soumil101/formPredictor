@@ -1,114 +1,182 @@
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, RTCConfiguration, WebRtcMode
-import cv2
+import pandas as pd
 import numpy as np
-from ball_tracking import track_ball, print_ball_data
-import av
+from sklearn.model_selection import train_test_split
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.pipeline import make_pipeline, FeatureUnion
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.metrics import accuracy_score, classification_report
+from imblearn.over_sampling import RandomOverSampler
+import matplotlib.pyplot as plt
+import cv2
 
-pixel_width = 1920
-pixel_height = 1080
-width_in_feet = 50
-height_in_feet = width_in_feet * (pixel_height / pixel_width)
+class TextSelector(BaseEstimator, TransformerMixin):
+    def __init__(self, key):
+        self.key = key
 
-conversion_factor_x = width_in_feet / pixel_width
-conversion_factor_y = height_in_feet / pixel_height
+    def fit(self, X, y=None):
+        return self
 
-classes = open('coco.names').read().strip().split('\n')
-np.random.seed(42)
-colors = np.random.randint(0, 255, size=(len(classes), 3), dtype='uint8')
+    def transform(self, X):
+        return X[self.key]
 
-net = cv2.dnn.readNetFromDarknet('yolov4.cfg', 'yolov4.weights')
-net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
-net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
+class NumberSelector(BaseEstimator, TransformerMixin):
+    def __init__(self, key):
+        self.key = key
 
-conf_threshold = 0.5
-nms_threshold = 0.4
+    def fit(self, X, y=None):
+        return self
 
-class VideoProcessor(VideoProcessorBase):
-    def __init__(self):
-        self.frame = None
+    def transform(self, X):
+        return X[[self.key]]
 
-    def recv(self, frame):
-        img = frame.to_ndarray(format="bgr24")
-        self.frame = img
-        return av.VideoFrame.from_ndarray(self.frame, format="bgr24")
+def process_data(path_detail_df, player_metrics_df):
+    def take_every_third_and_limit(x):
+        return x[::15][:20] 
 
-    def process(self):
-        if self.frame is None:
-            return
+    agg_path_detail_df = path_detail_df.groupby('pid').agg({
+        'cy': lambda x: take_every_third_and_limit(list(x)),
+        'cz': lambda x: take_every_third_and_limit(list(x)),
+        'fnm': 'first',
+        'lnm': 'first'
+    }).reset_index()
 
-        frame = self.frame
-        blob = cv2.dnn.blobFromImage(frame, 1 / 255, (416, 416), [0, 0, 0], 1, crop=False)
-        net.setInput(blob)
+    condition = agg_path_detail_df['pid'].isin([201935, 203081, 201142, 201939, 202691, 202681])
+    agg_path_detail_df = agg_path_detail_df.loc[condition]
 
-        outputs = net.forward(net.getUnconnectedOutLayersNames())
+    scaler = MinMaxScaler()
+    scaled_rows = []
 
-        frame_width = frame.shape[1]
-        frame_height = frame.shape[0]
-        center_x_pixel = frame_width / 2
-        center_y_pixel = frame_height / 2
-        boxes = []
-        confidences = []
-        class_ids = []
+    for i in range(len(agg_path_detail_df)):
+        row = agg_path_detail_df.iloc[i]
+        scaled_row = row.copy()
 
-        for output in outputs:
-            for detection in output:
-                scores = detection[5:]
-                class_id = np.argmax(scores)
-                confidence = scores[class_id]
-                if confidence > conf_threshold:
-                    x = int(detection[0] * frame_width)
-                    y = int(detection[1] * frame_height)
-                    width = int(detection[2] * frame_width)
-                    height = int(detection[3] * frame_height)
-                    left = x - width / 2
-                    top = y - height / 2
-                    adjusted_x = (left - center_x_pixel) * conversion_factor_x
-                    adjusted_y = (top - center_y_pixel) * conversion_factor_y
-                    adjusted_width = width * conversion_factor_x
-                    adjusted_height = height * conversion_factor_y
-                    class_ids.append(class_id)
-                    confidences.append(float(confidence))
-                    boxes.append([adjusted_x, adjusted_y, adjusted_width, adjusted_height])
+        for col in ['cy', 'cz']:
+            if isinstance(row[col], list):
+                data_array = np.array(row[col]).reshape(-1, 1)
+                scaled_data = scaler.fit_transform(data_array)
+                scaled_row[col] = scaled_data.flatten().tolist()
 
-        indices = cv2.dnn.NMSBoxes(boxes, confidences, conf_threshold, nms_threshold)
+        scaled_rows.append(scaled_row)
 
-        if isinstance(indices, tuple) and not indices:
-            indices = []
-        else:
-            indices = indices.flatten()
+    scaled_path_detail_df = pd.DataFrame(scaled_rows, columns=agg_path_detail_df.columns)
+    scaled_path_detail_df['full_name'] = scaled_path_detail_df['fnm'] + ' ' + scaled_path_detail_df['lnm']
+    scaled_path_detail_df = scaled_path_detail_df.drop(columns=['fnm', 'lnm'])
+    scaled_path_detail_df['cy_str'] = scaled_path_detail_df['cy'].apply(lambda x: ' '.join(map(str, x)))
+    scaled_path_detail_df['cz_str'] = scaled_path_detail_df['cz'].apply(lambda x: ' '.join(map(str, x)))
+    scaled_path_detail_df['cy_mean'] = scaled_path_detail_df['cy'].apply(lambda x: np.mean(x))
+    scaled_path_detail_df['cz_mean'] = scaled_path_detail_df['cz'].apply(lambda x: np.mean(x))
+    scaled_path_detail_df = scaled_path_detail_df.drop(columns=['cy', 'cz'])
 
-        selected_boxes = [boxes[i] for i in indices]
-        selected_class_ids = [class_ids[i] for i in indices]
+    repetitions = 50
+    repeated_df = scaled_path_detail_df.loc[scaled_path_detail_df.index.repeat(repetitions)].reset_index(drop=True)
+    return repeated_df, scaled_path_detail_df
 
-        ball_data = track_ball(frame, selected_boxes, selected_class_ids, classes)
-        print_ball_data(ball_data)
+def train_model(repeated_df):
+    X = repeated_df[['cy_str', 'cz_str', 'cy_mean', 'cz_mean']]
+    y = repeated_df['full_name']
 
-        for i in indices:
-            box = boxes[i]
-            class_id = class_ids[i]
-            color = [int(c) for c in colors[class_id]]
-            cv2.rectangle(frame, (int(box[0]), int(box[1])), (int(box[0] + box[2]), int(box[1] + box[3])), color, 2)
-            text = f"{classes[class_id]}: {confidences[i]:.2f}"
-            cv2.putText(frame, text, (int(box[0]), int(box[1] - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+    x_dev, x_val, y_dev, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+    ros = RandomOverSampler(random_state=42)
+    x_os, y_os = ros.fit_resample(x_dev, y_dev)
 
-        return frame
+    x_train, x_test, y_train, y_test = train_test_split(x_os, y_os, test_size=0.2, random_state=42)
 
-RTC_CONFIGURATION = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
+    features = FeatureUnion([
+        ('cy_str', make_pipeline(TextSelector(key='cy_str'), CountVectorizer())),
+        ('cz_str', make_pipeline(TextSelector(key='cz_str'), CountVectorizer())),
+        ('cy_mean', NumberSelector(key='cy_mean')),
+        ('cz_mean', NumberSelector(key='cz_mean'))
+    ])
 
-def main():
-    st.title("Live Video Processing with Streamlit")
-
-    webrtc_ctx = webrtc_streamer(
-        key="example",
-        mode=WebRtcMode.SENDRECV,
-        rtc_configuration=RTC_CONFIGURATION,
-        video_processor_factory=VideoProcessor,
-        media_stream_constraints={"video": True, "audio": False},
+    pipeline = make_pipeline(
+        features,
+        GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)
     )
 
-    if webrtc_ctx.video_processor:
-        webrtc_ctx.video_processor.process()
+    pipeline.fit(x_train, y_train)
+    y_pred = pipeline.predict(x_test)
+    accuracy = accuracy_score(y_test, y_pred)
+
+    return pipeline, accuracy, classification_report(y_test, y_pred)
+
+def plot_shots(player_df, player_name1, player_name2=None):
+    cy1 = player_df[player_df['full_name'] == player_name1]['cy_str'].values[0]
+    cz1 = player_df[player_df['full_name'] == player_name1]['cz_str'].values[0]
+
+    cy1 = list(map(float, cy1.split()))
+    cz1 = list(map(float, cz1.split()))
+
+    plt.figure(figsize=(5, 3))
+    plt.plot(cz1, cy1, marker='o', linestyle='-', color='blue', label=player_name1)
+
+    if player_name2:
+        cy2 = player_df[player_df['full_name'] == player_name2]['cy_str'].values[0]
+        cz2 = player_df[player_df['full_name'] == player_name2]['cz_str'].values[0]
+
+        cy2 = list(map(float, cy2.split()))
+        cz2 = list(map(float, cz2.split()))
+
+        plt.plot(cz2, cy2, marker='s', linestyle='--', color='green', label=player_name2)
+
+    plt.xlabel('Vertical Shot Movement (ft)')
+    plt.ylabel('Horizontal Shot Movement (ft)')
+    plt.title('Shot Movement Comparison')
+    plt.legend()
+    st.pyplot(plt)
+
+#TODO
+def process_video(uploaded_video):
+    video_bytes = uploaded_video.read()
+    video = cv2.VideoCapture(video_bytes)
+    _, frame = video.read()
+    video.release()
+    return frame
+
+
+def main():
+    st.title("Shot Movement Analysis")
+
+    path_detail_df = pd.read_csv('path_detail.csv')
+    player_metrics_df = pd.read_csv('player_metrics.csv')
+
+    repeated_df, scaled_path_detail_df = process_data(path_detail_df, player_metrics_df)
+
+    st.write("Our model...")
+    model, accuracy, report = train_model(repeated_df)
+
+    st.write(f"Model Accuracy: {accuracy:.2f}")
+    st.write("Classification Report:")
+    st.text(report)
+
+    st.write("Select a player to view shot graphs:")
+    players = scaled_path_detail_df['full_name'].unique()
+    selected_player1 = st.selectbox("Select First Player", players)
+    
+    add_second_player = st.checkbox("Select another player for comparison")
+    
+    if add_second_player:
+        selected_player2 = st.selectbox("Select Second Player", players, index=1)
+    else:
+        selected_player2 = None
+
+    if selected_player1:
+        st.write(f"Displaying shot movement for {selected_player1}")
+        if selected_player2:
+            st.write(f"Comparing with {selected_player2}")
+        plot_shots(scaled_path_detail_df, selected_player1, selected_player2)
+
+    st.write("Upload a video for analysis:")
+    uploaded_video = st.file_uploader("Choose a video...", type=["mp4", "mov", "avi"])
+
+    if uploaded_video is not None:
+        st.write("Processing video...")
+        frame = process_video(uploaded_video)
+        
+        st.write("Video uploaded successfully!")
+        st.image(frame, caption="First frame of the uploaded video")
 
 if __name__ == "__main__":
     main()

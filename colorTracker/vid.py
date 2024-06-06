@@ -3,17 +3,21 @@ import cv2
 import cvzone
 from cvzone.ColorModule import ColorFinder
 import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
 
 # Initialize the Video
-cap = cv2.VideoCapture('/Users/vikramkarmarkar/Desktop/School Work/ECS 170 - Spring 2024/Project/formPredicter/colorTracker/aadhi.MOV')
+cap = cv2.VideoCapture('/Users/vikramkarmarkar/Desktop/School Work/ECS 170 - Spring 2024/Project/formPredicter/colorTracker/IMG_4104.MOV')
 
 # Create the Color Finder Object (False to not run the slider)
 myColorFinder = ColorFinder(False)
 hsvVals = {'hmin': 0, 'smin': 137, 'vmin': 87, 'hmax': 89, 'smax': 255, 'vmax': 255}
 
 # Variables
-posListX = []
-posListY = []
+originalPosX = []
+originalPosY = []
+adjustedPosX = []
+adjustedPosY = []
 xList = [item for item in range(0, 1300)]
 prediction = False
 
@@ -23,6 +27,11 @@ while True:
     if not success:
         break
     
+    # Get the dimensions of the frame
+    frameHeight, frameWidth, _ = img.shape
+    centerX = frameWidth // 2
+    centerY = frameHeight // 2
+    
     # Find the Color of the Ball
     imgColor, mask = myColorFinder.update(img, hsvVals)
     
@@ -31,23 +40,32 @@ while True:
     
     # Checking if item exists, if it does get the center of the item
     if contours:
-        posListX.append(contours[0]['center'][0])
-        posListY.append(contours[0]['center'][1])
+        originalX = contours[0]['center'][0]
+        originalY = contours[0]['center'][1]
+        originalPosX.append(originalX)
+        originalPosY.append(originalY)
+        
+        # Adjust coordinates
+        adjX = originalX - centerX
+        adjY = centerY - originalY
+        adjustedPosX.append(adjX)
+        adjustedPosY.append(adjY)
         
     # Polynomial Regression    
-    if posListX:
+    if adjustedPosX:
         # Find the Coefficients
-        A, B, C = np.polyfit(posListX, posListY, 2)
+        A, B, C = np.polyfit(adjustedPosX, adjustedPosY, 2)
         
         # For loop to make the dots and line trail
-        for i, (posX, posY) in enumerate(zip(posListX, posListY)):
-            cv2.circle(imgContours, (posX, posY), 10, (0, 255, 0), cv2.FILLED)
+        for i, (posX, posY) in enumerate(zip(adjustedPosX, adjustedPosY)):
+            cv2.circle(imgContours, (posX + centerX, centerY - posY), 10, (0, 255, 0), cv2.FILLED)
             if i != 0:
-                cv2.line(imgContours, (posX, posY), (posListX[i-1], posListY[i-1]), (0, 255, 0), 5)
+                cv2.line(imgContours, (posX + centerX, centerY - posY), 
+                         (adjustedPosX[i-1] + centerX, centerY - adjustedPosY[i-1]), (0, 255, 0), 5)
                 
-    for posX, posY in zip(posListX, posListY):
+    for posX, posY in zip(adjustedPosX, adjustedPosY):
         text = f"({posX}, {posY})"
-        cv2.putText(imgContours, text, (posX, posY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+        cv2.putText(imgContours, text, (posX + centerX, centerY - posY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
     
     # Display
     imgContours = cv2.resize(imgContours, (0, 0), None, 0.7, 0.7)
@@ -65,7 +83,19 @@ while True:
 cap.release()
 cv2.destroyAllWindows()
 
-# Min-Max Scaling for posListX and posListY
+# ------------------------------
+# Original X and Y arrays
+# ------------------------------
+# originalPosX_array = originalPosX
+# originalPosY_array = originalPosY
+
+# originalPosX_array = [-1 * x for x in originalPosX]
+# originalPosY_array = [1 * y for y in originalPosY]
+
+# ------------------------------
+# Normalized X and Y arrays
+# ------------------------------
+# Min-Max Scaling for adjustedPosX and adjustedPosY
 def min_max_scaling(lst):
     min_val = min(lst)
     max_val = max(lst)
@@ -73,27 +103,45 @@ def min_max_scaling(lst):
     return scaled_lst
 
 # Apply Min-Max Scaling
-posListX_scaled = min_max_scaling(posListX)
-posListY_scaled = min_max_scaling(posListY)
+# Apply Min-Max Scaling and reflect over x-axis
+normalizedAdjustedPosX = min_max_scaling([1 * x for x in adjustedPosX])
+normalizedAdjustedPosY = min_max_scaling([-1 * y for y in adjustedPosY])
 
-# Print posListX and posListY
-# print("posListX:", posListX, "length: ", len(posListX))
-# print("posListY:", posListY, "length: ", len(posListY))
+# normalizedAdjustedPosX = [1 * x for x in adjustedPosX]
+# normalizedAdjustedPosY = [1 * y for y in adjustedPosY]
 
-# Data for ML Model
-posListX_str = ' '.join(map(str, posListX_scaled))
-posListY_str = ' '.join(map(str, posListY_scaled))
+# ------------------------------
+# Normalized AND stringified X and Y arrays
+# ------------------------------
+normalizedAndStringifiedAdjustedPosX = ' '.join(map(str, normalizedAdjustedPosX))
+normalizedAndStringifiedAdjustedPosY = ' '.join(map(str, normalizedAdjustedPosY))
 
-average_posListX = sum(posListX_scaled) / len(posListX_scaled) if posListX_scaled else 0
-average_posListY = sum(posListY_scaled) / len(posListY_scaled) if posListY_scaled else 0
+# Calculate average normalized values
+averageNormalizedAdjustedPosX = sum(normalizedAdjustedPosX) / len(normalizedAdjustedPosX) if normalizedAdjustedPosX else 0
+averageNormalizedAdjustedPosY = sum(normalizedAdjustedPosY) / len(normalizedAdjustedPosY) if normalizedAdjustedPosY else 0
 
-print("\nposListX:", posListX, "length: ", len(posListX), "\n")
-print("posListY:", posListY, "length: ", len(posListY), "\n")
-print("posListX (scaled and stringified):", posListX_str, "\n")
-print("posListY (scaled and stringified):", posListY_str, "\n")
-print("Average posX:", average_posListX, "\n")
-print("Average posY:", average_posListY, "\n")
+# Print the arrays and averages
+print("\nOriginal Adjusted X Positions:", adjustedPosX, "length:", len(adjustedPosX), "\n")
+print("Original Adjusted Y Positions:", adjustedPosY, "length:", len(adjustedPosY), "\n")
+print("Normalized Adjusted X Positions (stringified):", normalizedAndStringifiedAdjustedPosX, "\n")
+print("Normalized Adjusted Y Positions (stringified):", normalizedAndStringifiedAdjustedPosY, "\n")
+print("Average Normalized Adjusted X Position:", averageNormalizedAdjustedPosX, "\n")
+print("Average Normalized Adjusted Y Position:", averageNormalizedAdjustedPosY, "\n")
 print("Video duration (seconds):", video_duration, "\n")
+
+#plotting
+
+plt.figure(figsize=(10, 6))
+plt.plot(normalizedAdjustedPosX, normalizedAdjustedPosY, marker='o', linestyle='-', color='b')
+
+# Add labels and title
+plt.xlabel('Normalized Adjusted X Position')
+plt.ylabel('Normalized Adjusted Y Position')
+plt.title('Normalized Adjusted X vs. Y Position of the Ball')
+
+# Display the plot
+plt.grid(True)
+plt.show()
 
 
 

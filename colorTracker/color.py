@@ -6,7 +6,7 @@ from cvzone.ColorModule import ColorFinder
 import numpy as np
 
 # Initialize the Video
-cap = cv2.VideoCapture('/Users/chrislo/Desktop/Personal Github/BasketballAI---March-2023/Files/Videos/vid (2).mp4')
+#cap = cv2.VideoCapture('/Users/vikramkarmarkar/Desktop/School Work/ECS 170 - Spring 2024/Project/formPredicter/colorTracker/kar.png')
 hsvVals = 'red'
 
 myColorFinder = ColorFinder(True)
@@ -14,7 +14,7 @@ hsvVals = 'red'
 
 
 while True:
-    img = cv2.imread('/Users/chrislo/Desktop/Personal Github/BasketballAI---March-2023/Files/vik.png')
+    img = cv2.imread('/Users/vikramkarmarkar/Desktop/School Work/ECS 170 - Spring 2024/Project/formPredicter/colorTracker/kar.png')
     
     imgColor, mask = myColorFinder.update(img, hsvVals)
     

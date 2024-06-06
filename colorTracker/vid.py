@@ -65,26 +65,35 @@ while True:
 cap.release()
 cv2.destroyAllWindows()
 
+# Min-Max Scaling for posListX and posListY
+def min_max_scaling(lst):
+    min_val = min(lst)
+    max_val = max(lst)
+    scaled_lst = [(x - min_val) / (max_val - min_val) for x in lst]
+    return scaled_lst
+
+# Apply Min-Max Scaling
+posListX_scaled = min_max_scaling(posListX)
+posListY_scaled = min_max_scaling(posListY)
+
 # Print posListX and posListY
+# print("posListX:", posListX, "length: ", len(posListX))
+# print("posListY:", posListY, "length: ", len(posListY))
 
+# Data for ML Model
+posListX_str = ' '.join(map(str, posListX_scaled))
+posListY_str = ' '.join(map(str, posListY_scaled))
 
-print("posListX:", posListX, "length: ", len(posListX))
-print("posListY:", posListY, "length: ", len(posListY))
+average_posListX = sum(posListX_scaled) / len(posListX_scaled) if posListX_scaled else 0
+average_posListY = sum(posListY_scaled) / len(posListY_scaled) if posListY_scaled else 0
 
-#^ Data for ML Model
-posListX_str = ' '.join(map(str, posListX))
-posListY_str = ' '.join(map(str, posListY))
-
-average_posListX = sum(posListX) / len(posListX) if posListX else 0
-average_posListY = sum(posListY) / len(posListY) if posListY else 0
-
-print("posListX:", posListX, "length: ", len(posListX))
-print("posListY:", posListY, "length: ", len(posListY))
-print("posListX (stringified):", posListX_str)
-print("posListY (stringified):", posListY_str)
-print("Average posX:", average_posListX)
-print("Average posY:", average_posListY)
-print("Video duration (seconds):", video_duration)
+print("\nposListX:", posListX, "length: ", len(posListX), "\n")
+print("posListY:", posListY, "length: ", len(posListY), "\n")
+print("posListX (scaled and stringified):", posListX_str, "\n")
+print("posListY (scaled and stringified):", posListY_str, "\n")
+print("Average posX:", average_posListX, "\n")
+print("Average posY:", average_posListY, "\n")
+print("Video duration (seconds):", video_duration, "\n")
 
 
 

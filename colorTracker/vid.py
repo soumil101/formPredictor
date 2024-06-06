@@ -5,7 +5,7 @@ from cvzone.ColorModule import ColorFinder
 import numpy as np
 
 # Initialize the Video
-cap = cv2.VideoCapture('/Users/vikramkarmarkar/Desktop/School Work/ECS 170 - Spring 2024/Project/formPredicter/colorTracker/IMG_4106.MOV')
+cap = cv2.VideoCapture('/Users/vikramkarmarkar/Desktop/School Work/ECS 170 - Spring 2024/Project/formPredicter/colorTracker/aadhi.MOV')
 
 # Create the Color Finder Object (False to not run the slider)
 myColorFinder = ColorFinder(False)
@@ -54,6 +54,13 @@ while True:
     cv2.imshow("Image", imgContours)
     cv2.waitKey(100)  # Parameter is the amount of time you want the video to play
 
+    frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if fps > 0:
+        video_duration = frame_count / fps
+    else:
+        video_duration = 0
+
 # Release the video capture object and close all windows
 cap.release()
 cv2.destroyAllWindows()
@@ -63,3 +70,29 @@ cv2.destroyAllWindows()
 
 print("posListX:", posListX, "length: ", len(posListX))
 print("posListY:", posListY, "length: ", len(posListY))
+
+#^ Data for ML Model
+posListX_str = ' '.join(map(str, posListX))
+posListY_str = ' '.join(map(str, posListY))
+
+average_posListX = sum(posListX) / len(posListX) if posListX else 0
+average_posListY = sum(posListY) / len(posListY) if posListY else 0
+
+print("posListX:", posListX, "length: ", len(posListX))
+print("posListY:", posListY, "length: ", len(posListY))
+print("posListX (stringified):", posListX_str)
+print("posListY (stringified):", posListY_str)
+print("Average posX:", average_posListX)
+print("Average posY:", average_posListY)
+print("Video duration (seconds):", video_duration)
+
+
+
+
+# processes a vid to track the position of a basketball and predicts its trajectory using polynomial reg 
+# - initialize vid
+# - color finder setup
+# - HSV color range
+# - Variables for tracking: posListX, posListY, store x and y coordinates of detected basketball over time 
+# - process vid, track basketball 
+# - visualization of points on the image/vid

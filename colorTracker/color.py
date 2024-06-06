@@ -23,3 +23,6 @@ while True:
     
     cv2.waitKey(50)
     
+
+# Reads a single image, processes it to find specific color, displays result
+# - continuously reads kar.png from specified path

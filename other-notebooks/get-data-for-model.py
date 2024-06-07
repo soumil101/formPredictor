@@ -103,4 +103,3 @@ def calculate_points_and_plot(video_path):
 # Run the script
 video_path = '/Users/vikramkarmarkar/Desktop/School Work/ECS 170 - Spring 2024/Project/formPredicter/colorTracker/shot-videos/aadhi.MOV'
 calculate_points_and_plot(video_path)
-

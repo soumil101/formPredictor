@@ -1,3 +1,4 @@
+import os
 import math
 import cv2
 import cvzone
@@ -6,8 +7,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 
+# Create a directory to save frames if it does not exist
+frames_dir = 'frames'
+if not os.path.exists(frames_dir):
+    os.makedirs(frames_dir)
+
 # Initialize the Video
-cap = cv2.VideoCapture('/Users/vikramkarmarkar/Desktop/School Work/ECS 170 - Spring 2024/Project/formPredicter/colorTracker/aadhi.MOV')
+cap = cv2.VideoCapture('/Users/vikramkarmarkar/Desktop/School Work/ECS 170 - Spring 2024/Project/formPredicter/colorTracker/chris.MOV')
 
 # Create the Color Finder Object (False to not run the slider)
 myColorFinder = ColorFinder(False)
@@ -20,6 +26,8 @@ adjustedPosX = []
 adjustedPosY = []
 xList = [item for item in range(0, 1300)]
 prediction = False
+
+frame_counter = 0  # Initialize frame counter
 
 while True:
     success, img = cap.read()
@@ -50,6 +58,11 @@ while True:
         adjY = centerY - originalY
         adjustedPosX.append(adjX)
         adjustedPosY.append(adjY)
+        
+        # Save the current frame to the frames directory
+        frame_filename = os.path.join(frames_dir, f'frame_{frame_counter}.jpg')
+        cv2.imwrite(frame_filename, img)
+        frame_counter += 1
         
     # Polynomial Regression    
     if adjustedPosX:
@@ -84,15 +97,6 @@ cap.release()
 cv2.destroyAllWindows()
 
 # ------------------------------
-# Original X and Y arrays
-# ------------------------------
-# originalPosX_array = originalPosX
-# originalPosY_array = originalPosY
-
-# originalPosX_array = [-1 * x for x in originalPosX]
-# originalPosY_array = [1 * y for y in originalPosY]
-
-# ------------------------------
 # Normalized X and Y arrays
 # ------------------------------
 # Min-Max Scaling for adjustedPosX and adjustedPosY
@@ -103,12 +107,13 @@ def min_max_scaling(lst):
     return scaled_lst
 
 # Apply Min-Max Scaling
-# Apply Min-Max Scaling and reflect over x-axis
+
+
 normalizedAdjustedPosX = min_max_scaling([1 * x for x in adjustedPosX])
 normalizedAdjustedPosY = min_max_scaling([-1 * y for y in adjustedPosY])
 
-# normalizedAdjustedPosX = [1 * x for x in adjustedPosX]
-# normalizedAdjustedPosY = [1 * y for y in adjustedPosY]
+normalizedAdjustedPosX.reverse()
+normalizedAdjustedPosY.reverse()
 
 # ------------------------------
 # Normalized AND stringified X and Y arrays
@@ -129,8 +134,7 @@ print("Average Normalized Adjusted X Position:", averageNormalizedAdjustedPosX, 
 print("Average Normalized Adjusted Y Position:", averageNormalizedAdjustedPosY, "\n")
 print("Video duration (seconds):", video_duration, "\n")
 
-#plotting
-
+# Plotting
 plt.figure(figsize=(10, 6))
 plt.plot(normalizedAdjustedPosX, normalizedAdjustedPosY, marker='o', linestyle='-', color='b')
 

@@ -1,64 +1,59 @@
 import os
 import cv2
-from tkinter import Tk, filedialog, simpledialog
-import shutil
+import tkinter as tk
+from tkinter import filedialog, simpledialog
 
-'''
-upload the base image first (the calibration image for the known distance)
+# Create a directory to save frames if it does not exist
+frames_dir = 'frames'
+if not os.path.exists(frames_dir):
+    os.makedirs(frames_dir)
 
-then upload the video
-'''
+# Initialize Tkinter root
+root = tk.Tk()
+root.withdraw()  # Hide the root window
 
-def video_splitter(video_path, n_frames, output_dir="./frames"):
-    os.makedirs(output_dir, exist_ok=True)
+# Prompt the user for a video file to upload using file explorer
+video_path = filedialog.askopenfilename(title="Select a video file",
+                                        filetypes=[("Video files", "*.mp4 *.mov *.avi *.mkv")])
 
-    cap = cv2.VideoCapture(video_path)
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+if not video_path:
+    print("No file selected. Exiting.")
+    exit(1)
 
-    if total_frames < n_frames:
-        n_frames = total_frames
-        step = 1
-    else:
-        step = total_frames // (n_frames - 1)
+# Ask the user how many frames they want to split the video into
+num_frames = simpledialog.askinteger("Input", "Enter the number of frames you want the video to be split into:")
 
-    frame_num = 1  # Start from 1 since frame_0.jpg is the base image
-    for i in range(0, total_frames, step):
-        cap.set(cv2.CAP_PROP_POS_FRAMES, i)
-        ret, frame = cap.read()
-        if ret:
-            output_path = os.path.join(output_dir, f"frame_{frame_num}.jpg")
-            cv2.imwrite(output_path, frame)
-            frame_num += 1
+if not num_frames:
+    print("No number of frames entered. Exiting.")
+    exit(1)
 
-    cap.release()
+# Open the video file
+cap = cv2.VideoCapture(video_path)
 
-if __name__ == "__main__":
-    root = Tk()
-    root.withdraw()
+# Get the total number of frames in the video
+total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    # Prompt for base image first
-    base_image_path = filedialog.askopenfilename(title="Select Base Image")
-    if base_image_path:
-        # Save base image as frame_0.jpg in the output directory
-        output_dir = "./frames"
-        os.makedirs(output_dir, exist_ok=True)
-        base_image_dest = os.path.join(output_dir, "frame_0.jpg")
-        shutil.copy(base_image_path, base_image_dest)
-    else:
-        print("No base image selected.")
-        root.destroy()
-        exit()
+# Calculate the specific frames to save
+frame_indices = [int(i * total_frames / num_frames) for i in range(num_frames)]
 
-    # Prompt for video file
-    video_path = filedialog.askopenfilename(title="Select Video File")
-    if video_path:
-        n_frames = simpledialog.askinteger("Number of Frames", "How many frames do you want the video split into?")
-        if n_frames:
-            # Process the video
-            video_splitter(video_path, n_frames, output_dir)
-        else:
-            print("Invalid number of frames entered.")
-    else:
-        print("No video file selected.")
+# Initialize a counter for the frames
+frame_counter = 0
+saved_frame_counter = 0
 
-    root.destroy()
+while True:
+    success, frame = cap.read()
+    
+    if not success:
+        break
+
+    if frame_counter in frame_indices:
+        frame_filename = os.path.join(frames_dir, f'frame_{saved_frame_counter}.jpg')
+        cv2.imwrite(frame_filename, frame)
+        saved_frame_counter += 1
+    
+    frame_counter += 1
+
+# Release the video capture object
+cap.release()
+
+print(f"Video split into {saved_frame_counter} frames and saved in the '{frames_dir}' directory.")

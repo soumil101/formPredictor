@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from sklearn.preprocessing import MinMaxScaler
 
+
 def min_max_scaling(lst):
     min_val = min(lst)
     max_val = max(lst)
@@ -17,11 +18,13 @@ def calculate_points_and_plot(video_path):
     # Initialize the Video
     cap = cv2.VideoCapture(video_path)
     myColorFinder = ColorFinder(False)
-    #library HSV: 
-    hsvVals = {'hmin': 0, 'smin': 137, 'vmin': 87, 'hmax': 89, 'smax': 255, 'vmax': 255}
+    #library HSV: hsvVals = {'hmin': 0, 'smin': 137, 'vmin': 87, 'hmax': 89, 'smax': 255, 'vmax': 255}
     #aadhi arc shot: hsvVals = {'hmin': 0, 'smin': 133, 'vmin': 96, 'hmax': 111, 'smax': 255, 'vmax': 255}
     #(arc3) hsvVals = {'hmin': 0, 'smin': 60, 'vmin': 179, 'hmax': 179, 'smax': 255, 'vmax': 255}
     #(arc4) hsvVals = {'hmin': 0, 'smin': 94, 'vmin': 95, 'hmax': 31, 'smax': 255, 'vmax': 255}
+    #lib- vik hsvVals = {'hmin': 0, 'smin': 75, 'vmin': 0, 'hmax': 179, 'smax': 255, 'vmax': 255}
+    #chris-lib
+    hsvVals = {'hmin': 0, 'smin': 130, 'vmin': 0, 'hmax': 179, 'smax': 255, 'vmax': 255}
 
     # Variables
     originalPosX = []
@@ -112,10 +115,12 @@ def calculate_points_and_plot(video_path):
 
     print("\n\n\nNormalized, Adjusted, PosX:", normalizedAdjustedPosX, "length:", len(normalizedAdjustedPosX), "\n")
     print("\n\n\nNormalized, Adjusted, PosY:", normalizedAdjustedPosY, "length:", len(normalizedAdjustedPosY), "\n")
+    formatted_array = [[normalizedAdjustedPosX[i], normalizedAdjustedPosY[i]] for i in range(len(normalizedAdjustedPosY))]
+    print("FORMATTED ARRAY", formatted_array)
 
     # Plotting
     plt.figure(figsize=(10, 6))
-    plt.plot([-1 * y for y in normalizedAdjustedPosX], normalizedAdjustedPosY, marker='o', linestyle='-', color='b')    
+    plt.plot([-1 * x for x in normalizedAdjustedPosX], normalizedAdjustedPosY, marker='o', linestyle='-', color='b')    
     plt.xlabel('Normalized Adjusted X Position')
     plt.ylabel('Normalized Adjusted Y Position')
     plt.title('Normalized Adjusted X vs. Y Position of the Ball')
@@ -123,6 +128,6 @@ def calculate_points_and_plot(video_path):
     plt.show()
 
 # Run the script
-video_path = '/Users/vikramkarmarkar/Desktop/School Work/ECS 170 - Spring 2024/Project/formPredicter/colorTracker/shot-videos/aadhi_arc2.MOV'
+video_path = '/Users/vikramkarmarkar/Desktop/School Work/ECS 170 - Spring 2024/Project/formPredicter/colorTracker/shot-videos/aaron.MOV'
 calculate_points_and_plot(video_path)
 

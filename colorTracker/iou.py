@@ -155,7 +155,7 @@ def calculate_iou_for_video(video_path, frames_dir, input_json_dir, output_json_
     print("Average IoU:", average_iou)
 
 # Run the script
-video_path = '/Users/vikramkarmarkar/Desktop/School Work/ECS 170 - Spring 2024/Project/formPredicter/colorTracker/shot-videos/kalyan_arc.MOV'
+video_path = '/Users/vikramkarmarkar/Desktop/School Work/ECS 170 - Spring 2024/Project/formPredicter/colorTracker/shot-videos/aadhi_arc2.MOV'
 frames_dir = 'frames'
 input_json_dir = './frames'
 output_json_dir = '../adjusted-bounding-box-coords'

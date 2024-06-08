@@ -5,6 +5,7 @@ import cvzone
 from cvzone.ColorModule import ColorFinder
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
 from sklearn.preprocessing import MinMaxScaler
 
 def min_max_scaling(lst):
@@ -75,9 +76,21 @@ def calculate_points_and_plot(video_path):
     cap.release()
     cv2.destroyAllWindows()
 
+    # Interpolate to get 20 points
+    num_points = 20
+    if len(adjustedPosX) > 1:
+        interp_func_x = interp1d(range(len(adjustedPosX)), adjustedPosX, kind='linear', fill_value="extrapolate")
+        interp_func_y = interp1d(range(len(adjustedPosY)), adjustedPosY, kind='linear', fill_value="extrapolate")
+        standardized_indices = np.linspace(0, len(adjustedPosX) - 1, num=num_points)
+        standardized_adjustedPosX = interp_func_x(standardized_indices)
+        standardized_adjustedPosY = interp_func_y(standardized_indices)
+    else:
+        standardized_adjustedPosX = adjustedPosX
+        standardized_adjustedPosY = adjustedPosY
+
     # Normalize and stringified X and Y arrays
-    normalizedAdjustedPosX = min_max_scaling([1 * x for x in adjustedPosX])
-    normalizedAdjustedPosY = min_max_scaling([-1 * y for y in adjustedPosY])
+    normalizedAdjustedPosX = min_max_scaling([1 * x for x in standardized_adjustedPosX])
+    normalizedAdjustedPosY = min_max_scaling([-1 * y for y in standardized_adjustedPosY])
 
     normalizedAdjustedPosX.reverse()
     normalizedAdjustedPosY.reverse()
@@ -88,14 +101,17 @@ def calculate_points_and_plot(video_path):
     averageNormalizedAdjustedPosX = sum(normalizedAdjustedPosX) / len(normalizedAdjustedPosX) if normalizedAdjustedPosX else 0
     averageNormalizedAdjustedPosY = sum(normalizedAdjustedPosY) / len(normalizedAdjustedPosY) if normalizedAdjustedPosY else 0
 
-    print("\nOriginal Adjusted X Positions:", adjustedPosX, "length:", len(adjustedPosX), "\n")
-    print("Original Adjusted Y Positions:", adjustedPosY, "length:", len(adjustedPosY), "\n")
+    # print("\nOriginal Adjusted X Positions:", adjustedPosX, "length:", len(adjustedPosX), "\n")
+    # print("Original Adjusted Y Positions:", adjustedPosY, "length:", len(adjustedPosY), "\n")
     print("Normalized Adjusted X Positions (stringified):", normalizedAndStringifiedAdjustedPosX, "\n")
     print("Normalized Adjusted Y Positions (stringified):", normalizedAndStringifiedAdjustedPosY, "\n")
     print("Normalized Adjusted X Positions (UNSTRINGIFIED):", normalizedAdjustedPosX, "\n")
     print("Normalized Adjusted Y Positions (UNSTRINGIFIED):", normalizedAdjustedPosY, "\n")
     print("Average Normalized Adjusted X Position:", averageNormalizedAdjustedPosX, "\n")
     print("Average Normalized Adjusted Y Position:", averageNormalizedAdjustedPosY, "\n")
+
+    print("\n\n\nNormalized, Adjusted, PosX:", normalizedAdjustedPosX, "length:", len(normalizedAdjustedPosX), "\n")
+    print("\n\n\nNormalized, Adjusted, PosY:", normalizedAdjustedPosY, "length:", len(normalizedAdjustedPosY), "\n")
 
     # Plotting
     plt.figure(figsize=(10, 6))
@@ -107,6 +123,6 @@ def calculate_points_and_plot(video_path):
     plt.show()
 
 # Run the script
-video_path = '/Users/vikramkarmarkar/Desktop/School Work/ECS 170 - Spring 2024/Project/formPredicter/colorTracker/shot-videos/vikK.MOV'
+video_path = '/Users/vikramkarmarkar/Desktop/School Work/ECS 170 - Spring 2024/Project/formPredicter/colorTracker/shot-videos/aadhi_arc2.MOV'
 calculate_points_and_plot(video_path)
 

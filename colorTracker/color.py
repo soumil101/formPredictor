@@ -14,7 +14,7 @@ hsvVals = 'red'
 
 
 while True:
-    img = cv2.imread('/Users/vikramkarmarkar/Desktop/School Work/ECS 170 - Spring 2024/Project/formPredicter/colorTracker/kar.png')
+    img = cv2.imread('/Users/vikramkarmarkar/Desktop/School Work/ECS 170 - Spring 2024/Project/formPredicter/colorTracker/arc4.png')
     
     imgColor, mask = myColorFinder.update(img, hsvVals)
     

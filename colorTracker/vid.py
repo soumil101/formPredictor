@@ -16,7 +16,11 @@ def calculate_points_and_plot(video_path):
     # Initialize the Video
     cap = cv2.VideoCapture(video_path)
     myColorFinder = ColorFinder(False)
+    #library HSV: 
     hsvVals = {'hmin': 0, 'smin': 137, 'vmin': 87, 'hmax': 89, 'smax': 255, 'vmax': 255}
+    #aadhi arc shot: hsvVals = {'hmin': 0, 'smin': 133, 'vmin': 96, 'hmax': 111, 'smax': 255, 'vmax': 255}
+    #(arc3) hsvVals = {'hmin': 0, 'smin': 60, 'vmin': 179, 'hmax': 179, 'smax': 255, 'vmax': 255}
+    #(arc4) hsvVals = {'hmin': 0, 'smin': 94, 'vmin': 95, 'hmax': 31, 'smax': 255, 'vmax': 255}
 
     # Variables
     originalPosX = []
@@ -88,12 +92,14 @@ def calculate_points_and_plot(video_path):
     print("Original Adjusted Y Positions:", adjustedPosY, "length:", len(adjustedPosY), "\n")
     print("Normalized Adjusted X Positions (stringified):", normalizedAndStringifiedAdjustedPosX, "\n")
     print("Normalized Adjusted Y Positions (stringified):", normalizedAndStringifiedAdjustedPosY, "\n")
+    print("Normalized Adjusted X Positions (UNSTRINGIFIED):", normalizedAdjustedPosX, "\n")
+    print("Normalized Adjusted Y Positions (UNSTRINGIFIED):", normalizedAdjustedPosY, "\n")
     print("Average Normalized Adjusted X Position:", averageNormalizedAdjustedPosX, "\n")
     print("Average Normalized Adjusted Y Position:", averageNormalizedAdjustedPosY, "\n")
 
     # Plotting
     plt.figure(figsize=(10, 6))
-    plt.plot(normalizedAdjustedPosX, normalizedAdjustedPosY, marker='o', linestyle='-', color='b')
+    plt.plot([-1 * y for y in normalizedAdjustedPosX], normalizedAdjustedPosY, marker='o', linestyle='-', color='b')    
     plt.xlabel('Normalized Adjusted X Position')
     plt.ylabel('Normalized Adjusted Y Position')
     plt.title('Normalized Adjusted X vs. Y Position of the Ball')

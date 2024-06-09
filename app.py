@@ -28,12 +28,15 @@ from nltk.corpus import wordnet
 import random
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neighbors import NearestNeighbors
+import statistics
 
-knn_chebyshev = load('models/knn_chebyshev.pkl')
-knn_euclidean = load('models/knn_euclidean.pkl')
-knn_manhattan = load('models/knn_manhattan.pkl')
+kmeans_chebyshev = load('models/knn_chebyshev.pkl')
+kmeans_euclidean = load('models/knn_euclidean.pkl')
+kmeans_manhattan = load('models/knn_manhattan.pkl')
 
 player_pic_dict = {
+    'Kobe Bryant': 'kobe.jpeg',
+    'Dirk Nowitzki': 'dirk.jpeg',
     'LeBron James': 'james.jpeg',
     'Stephen Curry': 'curry.jpeg',
     'Kevin Durant': 'durant.jpeg',
@@ -50,43 +53,79 @@ player_pic_dict = {
     'Chris Paul': 'paul.jpeg',
     'Jeremy Lin': 'lin.jpeg',
     'Draymond Green': 'draymond.jpeg',
-    'Kobe Bryant': 'kobe.jpeg',
     'Danny Green': 'green.jpeg',
     'Derrick Rose': 'rose.jpeg',
     'JJ Redick': 'redick.jpeg',
     'Kyle Korver': 'korver.jpeg',
-    'Dirk Nowitzki': 'dirk.jpeg',
     'Andre Igoudala': 'iggy.jpeg',
     'Marcus Smart': 'smart.jpeg',
     'Manu Ginobili': 'manu.jpeg',
 }
 
+player_names = [
+    'Kobe Bryant', 'Dirk Nowitzki', 'Manu Ginobili', 'LeBron James', 'Carmelo Anthony',
+    'Kyle Korver', 'Andre Iguodala', 'JR Smith', 'Chris Paul', 'JJ Redick',
+    'Kevin Durant', 'Derrick Rose', 'Russell Westbrook', 'James Harden', 'Stephen Curry',
+    'Danny Green', 'Paul George', 'Jeremy Lin', 'Kyrie Irving', 'Klay Thompson',
+    'Kawhi Leonard', 'Jimmy Butler', 'Damian Lillard', 'Draymond Green', 'Marcus Smart'
+]
+
+
+transformer_manhattan = FunctionTransformer(lambda x: np.sum(np.abs(x), axis=1).reshape(-1, 1), validate=True)
+transformer_euclidean = FunctionTransformer(lambda x: x, validate=True)
+transformer_chebyshev = FunctionTransformer(lambda x: np.max(np.abs(x), axis=1).reshape(-1, 1), validate=True)
+
+def calculate_metrics(data):
+  metrics = []
+  xmean = 0
+  ymean = 0
+  x = []
+  y = []
+  for i in range(len(data)):
+    x.append(data[i][0])
+    y.append(data[i][1])
+    xmean += data[i][0]
+    ymean += data[i][1]
+  xmean /= len(data)
+  ymean /= len(data)
+  xstd = statistics.stdev(x)
+  ystd = statistics.stdev(y)
+  xvar = statistics.variance(x)
+  yvar = statistics.variance(y)
+  metrics.append(xmean)
+  metrics.append(ymean)
+  metrics.append(xstd)
+  metrics.append(ystd)
+  metrics.append(xvar)
+  metrics.append(yvar)
+  slopes = []
+  for i in range(len(data) - 1):
+      x1, y1 = data[i]
+      x2, y2 = data[i + 1]
+      slope = (y2 - y1) / (x2 - x1)
+      slopes.append(slope)
+  slope_changes = []
+  for i in range(len(slopes) - 1):
+      slope_change = abs(slopes[i + 1] - slopes[i])
+      slope_changes.append(slope_change)
+  average_slope_change = np.mean(slope_changes)
+  metrics.append(average_slope_change)
+  return metrics
+
 def give_prediction(test_array):
-    options = []
-    prediction1 = knn_chebyshev.predict(test_array)
-    prediction2 = knn_euclidean.predict(test_array)
-    prediction3 = knn_manhattan.predict(test_array)
-
-    unique_labels, counts = np.unique(prediction1, return_counts=True)
-    majority_index = np.argmax(counts)
-    majority_class_label_1 = unique_labels[majority_index]
-
-    unique_labels, counts = np.unique(prediction2, return_counts=True)
-    majority_index = np.argmax(counts)
-    majority_class_label_2 = unique_labels[majority_index]
-
-    unique_labels, counts = np.unique(prediction3, return_counts=True)
-    majority_index = np.argmax(counts)
-    majority_class_label_3 = unique_labels[majority_index]
-
-    if majority_class_label_1 == majority_class_label_2 == majority_class_label_3:
-        options.append(majority_class_label_1)
-    else:
-        options.append(majority_class_label_1)
-        options.append(majority_class_label_2)
-        options.append(majority_class_label_3)
-    
-    return options
+  options = []
+  prediction1 = kmeans_chebyshev.predict(transformer_chebyshev.fit_transform(test_array))
+  prediction2 = kmeans_euclidean.predict(test_array)
+  prediction3 = kmeans_manhattan.predict(transformer_manhattan.fit_transform(test_array))
+  if prediction1[0] == prediction2[0] and prediction1[0] != prediction3[0]:
+    options.append(prediction1[0])
+  elif prediction1[0] == prediction3[0] and prediction1[0] != prediction2[0]:
+    options.append(prediction1[0])
+  elif prediction2[0] == prediction3[0] and prediction1[0] != prediction2[0]:
+    options.append(prediction2[0])
+  else:
+    options.append(prediction2[0])
+  return player_names[options[0]]
 
 def min_max_scaling(lst):
     min_val = min(lst)
@@ -333,7 +372,7 @@ def main():
         plot_shots(scaled_path_detail_df, selected_player1, selected_player2)
 
     st.title("Who do you shoot like?")
-    st.write("Upload a video of your shot and we'll tell you who you shoot like! Please shoot a video with an orange basketball and a white background. Your non-dominant hand should be away from the ball.")
+    st.write("Upload a video of your shot and we'll tell you who you shoot like! Please shoot a video with an orange basketball and a white background. Your non-dominant hand should be away from the ball. ")
     uploaded_video = st.file_uploader("Choose a video...", type=["mp4", "mov"])
 
     if uploaded_video is not None:
@@ -342,9 +381,11 @@ def main():
             temp_file_path = tmp_file.name
         
         arr = calculate_points_and_plot(temp_file_path)
-        res = give_prediction(arr)
-        st.image(f"pics/{player_pic_dict[res[0]]}", use_column_width='always')
-        st.title(f"You shoot like {res[0]}")
+        l = np.array(arr).flatten()
+        test = np.hstack((l, calculate_metrics(arr)[0], calculate_metrics(arr)[1], calculate_metrics(arr)[2], calculate_metrics(arr)[3], calculate_metrics(arr)[4], calculate_metrics(arr)[5], calculate_metrics(arr)[6]))
+        res = give_prediction([test])
+        st.image(f"pics/{player_pic_dict[res]}", use_column_width='always')
+        st.title(f"You shoot like {res}")
 
 if __name__ == "__main__":
     main()

@@ -11,6 +11,139 @@ from sklearn.metrics import accuracy_score, classification_report
 from imblearn.over_sampling import RandomOverSampler
 import matplotlib.pyplot as plt
 import cv2
+import math
+import cvzone
+from cvzone.ColorModule import ColorFinder
+from scipy.interpolate import interp1d
+from joblib import load
+import tempfile
+import torch
+from torch.utils.data import DataLoader, TensorDataset
+from torch import nn, optim
+import torch.nn.functional as F
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler, FunctionTransformer
+from nltk.corpus import wordnet
+import random
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neighbors import NearestNeighbors
+
+knn_chebyshev = load('models/knn_chebyshev.pkl')
+knn_euclidean = load('models/knn_euclidean.pkl')
+knn_manhattan = load('models/knn_manhattan.pkl')
+
+def give_prediction(test_array):
+    options = []
+    prediction1 = knn_chebyshev.predict(test_array)
+    prediction2 = knn_euclidean.predict(test_array)
+    prediction3 = knn_manhattan.predict(test_array)
+
+    unique_labels, counts = np.unique(prediction1, return_counts=True)
+    majority_index = np.argmax(counts)
+    majority_class_label_1 = unique_labels[majority_index]
+
+    unique_labels, counts = np.unique(prediction2, return_counts=True)
+    majority_index = np.argmax(counts)
+    majority_class_label_2 = unique_labels[majority_index]
+
+    unique_labels, counts = np.unique(prediction3, return_counts=True)
+    majority_index = np.argmax(counts)
+    majority_class_label_3 = unique_labels[majority_index]
+
+    if majority_class_label_1 == majority_class_label_2 == majority_class_label_3:
+        options.append(majority_class_label_1)
+    else:
+        options.append(majority_class_label_1)
+        options.append(majority_class_label_2)
+        options.append(majority_class_label_3)
+    
+    return options
+
+def min_max_scaling(lst):
+    min_val = min(lst)
+    max_val = max(lst)
+    return [(x - min_val) / (max_val - min_val) for x in lst]
+
+def calculate_points_and_plot(mov):
+    cap = cv2.VideoCapture(mov)
+    myColorFinder = ColorFinder(False)
+    hsvVals = {'hmin': 0, 'smin': 130, 'vmin': 0, 'hmax': 179, 'smax': 255, 'vmax': 255}
+
+    originalPosX = []
+    originalPosY = []
+    adjustedPosX = []
+    adjustedPosY = []
+
+    while True:
+        success, img = cap.read()
+        if not success:
+            break
+        
+        frameHeight, frameWidth, _ = img.shape
+        centerX = frameWidth // 2
+        centerY = frameHeight // 2
+        
+        imgColor, mask = myColorFinder.update(img, hsvVals)
+        imgContours, contours = cvzone.findContours(img, mask, minArea=200)
+        
+        if contours:
+            originalX = contours[0]['center'][0]
+            originalY = contours[0]['center'][1]
+            originalPosX.append(originalX)
+            originalPosY.append(originalY)
+            
+            adjX = originalX - centerX
+            adjY = centerY - originalY
+            adjustedPosX.append(adjX)
+            adjustedPosY.append(adjY)
+            
+            if adjustedPosX:
+                A, B, C = np.polyfit(adjustedPosX, adjustedPosY, 2)
+                for i, (posX, posY) in enumerate(zip(adjustedPosX, adjustedPosY)):
+                    cv2.circle(imgContours, (posX + centerX, centerY - posY), 10, (0, 255, 0), cv2.FILLED)
+                    if i != 0:
+                        cv2.line(imgContours, (posX + centerX, centerY - posY), 
+                                 (adjustedPosX[i-1] + centerX, centerY - adjustedPosY[i-1]), (0, 255, 0), 5)
+                
+            for posX, posY in zip(adjustedPosX, adjustedPosY):
+                text = f"({posX}, {posY})"
+                cv2.putText(imgContours, text, (posX + centerX, centerY - posY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+
+    num_points = 20
+    if len(adjustedPosX) > 1:
+        interp_func_x = interp1d(range(len(adjustedPosX)), adjustedPosX, kind='linear', fill_value="extrapolate")
+        interp_func_y = interp1d(range(len(adjustedPosY)), adjustedPosY, kind='linear', fill_value="extrapolate")
+        standardized_indices = np.linspace(0, len(adjustedPosX) - 1, num=num_points)
+        standardized_adjustedPosX = interp_func_x(standardized_indices)
+        standardized_adjustedPosY = interp_func_y(standardized_indices)
+    else:
+        standardized_adjustedPosX = adjustedPosX
+        standardized_adjustedPosY = adjustedPosY
+
+    normalizedAdjustedPosX = min_max_scaling([1 * x for x in standardized_adjustedPosX])
+    normalizedAdjustedPosY = min_max_scaling([-1 * y for y in standardized_adjustedPosY])
+
+    normalizedAdjustedPosX.reverse()
+    normalizedAdjustedPosY.reverse()
+
+    normalizedAndStringifiedAdjustedPosX = ' '.join(map(str, normalizedAdjustedPosX))
+    normalizedAndStringifiedAdjustedPosY = ' '.join(map(str, normalizedAdjustedPosY))
+
+    averageNormalizedAdjustedPosX = sum(normalizedAdjustedPosX) / len(normalizedAdjustedPosX) if normalizedAdjustedPosX else 0
+    averageNormalizedAdjustedPosY = sum(normalizedAdjustedPosY) / len(normalizedAdjustedPosY) if normalizedAdjustedPosY else 0
+
+    formatted_array = [[normalizedAdjustedPosX[i], normalizedAdjustedPosY[i]] for i in range(len(normalizedAdjustedPosY))]
+
+    plt.figure(figsize=(10, 6))
+    plt.plot([-1 * x for x in normalizedAdjustedPosX], normalizedAdjustedPosY, marker='o', linestyle='-', color='b')    
+    plt.xlabel('Normalized Adjusted X Position')
+    plt.ylabel('Normalized Adjusted Y Position')
+    plt.title('Normalized Adjusted X vs. Y Position of the Ball')
+    plt.grid(True)
+    plt.show()
+
+    return formatted_array
 
 class TextSelector(BaseEstimator, TransformerMixin):
     def __init__(self, key):
@@ -127,7 +260,6 @@ def plot_shots(player_df, player_name1, player_name2=None):
     plt.legend()
     st.pyplot(plt)
 
-#TODO
 def process_video(uploaded_video):
     video_bytes = uploaded_video.read()
     video = cv2.VideoCapture(video_bytes)
@@ -135,22 +267,26 @@ def process_video(uploaded_video):
     video.release()
     return frame
 
-
 def main():
-    st.title("Shot Movement Analysis")
+    st.title("Form Finder")
 
-    path_detail_df = pd.read_csv('path_detail.csv')
-    player_metrics_df = pd.read_csv('player_metrics.csv')
+    st.write("Welcome to Form Finder! This app helps you analyze basketball shooting form. We have two core features: shot movement comparison and who do you shoot like? Try both below!")
+
+    st.write("Group 7: Aadhi Aravind, Chris Lo, Kalyan Suvarna, Rahul Prabhu, Soumil Gad, Vikram Choudhry, Vikram Karmarkar")
+
+    path_detail_df = pd.read_csv('Shooting Form Data/path_detail.csv')
+    player_metrics_df = pd.read_csv('Shooting Form Data/player_metrics.csv')
 
     repeated_df, scaled_path_detail_df = process_data(path_detail_df, player_metrics_df)
 
-    st.write("Our model...")
-    model, accuracy, report = train_model(repeated_df)
+    # st.write("Our model...")
+    # model, accuracy, report = train_model(repeated_df)
 
-    st.write(f"Model Accuracy: {accuracy:.2f}")
-    st.write("Classification Report:")
-    st.text(report)
+    # st.write(f"Model Accuracy: {accuracy:.2f}")
+    # st.write("Classification Report:")
+    # st.text(report)
 
+    st.title("Player Shot Movement Comparison")
     st.write("Select a player to view shot graphs:")
     players = scaled_path_detail_df['full_name'].unique()
     selected_player1 = st.selectbox("Select First Player", players)
@@ -168,15 +304,18 @@ def main():
             st.write(f"Comparing with {selected_player2}")
         plot_shots(scaled_path_detail_df, selected_player1, selected_player2)
 
-    st.write("Upload a video for analysis:")
-    uploaded_video = st.file_uploader("Choose a video...", type=["mp4", "mov", "avi"])
+    st.title("Who do you shoot like?")
+
+    uploaded_video = st.file_uploader("Choose a video...", type=["mp4", "mov"])
 
     if uploaded_video is not None:
-        st.write("Processing video...")
-        frame = process_video(uploaded_video)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mov") as tmp_file:
+            tmp_file.write(uploaded_video.read())
+            temp_file_path = tmp_file.name
         
-        st.write("Video uploaded successfully!")
-        st.image(frame, caption="First frame of the uploaded video")
+        arr = calculate_points_and_plot(temp_file_path)
+        res = give_prediction(arr)
+        st.title(f"You shoot like {res[0]}")
 
 if __name__ == "__main__":
     main()

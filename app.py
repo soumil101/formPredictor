@@ -33,6 +33,34 @@ knn_chebyshev = load('models/knn_chebyshev.pkl')
 knn_euclidean = load('models/knn_euclidean.pkl')
 knn_manhattan = load('models/knn_manhattan.pkl')
 
+player_pic_dict = {
+    'LeBron James': 'james.jpeg',
+    'Stephen Curry': 'curry.jpeg',
+    'Kevin Durant': 'durant.jpeg',
+    'Kawhi Leonard': 'kawhi.jpeg',
+    'James Harden': 'harden.jpeg',
+    'Damian Lillard': 'dame.jpeg',
+    'Jimmy Butler': 'butler.jpeg',
+    'Klay Thompson': 'klay.jpeg',
+    'J.R Smith': 'smith.jpeg',
+    'Carmelo Anthony': 'carmelo.jpeg',
+    'Russell Westbrook': 'westbrook.jpeg',
+    'Kyrie Irving': 'kyrie.jpeg',
+    'Paul George': 'george.jpeg',
+    'Chris Paul': 'paul.jpeg',
+    'Jeremy Lin': 'lin.jpeg',
+    'Draymond Green': 'draymond.jpeg',
+    'Kobe Bryant': 'kobe.jpeg',
+    'Danny Green': 'green.jpeg',
+    'Derrick Rose': 'rose.jpeg',
+    'JJ Redick': 'redick.jpeg',
+    'Kyle Korver': 'korver.jpeg',
+    'Dirk Nowitzki': 'dirk.jpeg',
+    'Andre Igoudala': 'iggy.jpeg',
+    'Marcus Smart': 'smart.jpeg',
+    'Manu Ginobili': 'manu.jpeg',
+}
+
 def give_prediction(test_array):
     options = []
     prediction1 = knn_chebyshev.predict(test_array)
@@ -305,7 +333,7 @@ def main():
         plot_shots(scaled_path_detail_df, selected_player1, selected_player2)
 
     st.title("Who do you shoot like?")
-
+    st.write("Upload a video of your shot and we'll tell you who you shoot like! Please shoot a video with an orange basketball and a white background. Your non-dominant hand should be away from the ball.")
     uploaded_video = st.file_uploader("Choose a video...", type=["mp4", "mov"])
 
     if uploaded_video is not None:
@@ -315,6 +343,7 @@ def main():
         
         arr = calculate_points_and_plot(temp_file_path)
         res = give_prediction(arr)
+        st.image(f"pics/{player_pic_dict[res[0]]}", use_column_width='always')
         st.title(f"You shoot like {res[0]}")
 
 if __name__ == "__main__":

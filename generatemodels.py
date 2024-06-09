@@ -187,7 +187,7 @@ print(f'Davies-Bouldin Score for K-Means model with Manhattan distance: {davies_
 print(f'Davies-Bouldin Score for K-Means model with Euclidean distance: {davies_bouldin_euclidean}')
 print(f'Davies-Bouldin Score for K-Means model with Chebyshev distance: {davies_bouldin_chebyshev}')
 
-# dump to pickles
+
 dump(kmeans_manhattan, 'models/knn_manhattan.pkl')
 dump(kmeans_euclidean, 'models/knn_euclidean.pkl')
 dump(kmeans_chebyshev, 'models/knn_chebyshev.pkl')
@@ -206,3 +206,7 @@ def give_prediction(test_array):
   else:
     options.append(prediction2[0])
   return y[options[0]]
+
+
+
+

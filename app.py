@@ -380,12 +380,16 @@ def main():
             tmp_file.write(uploaded_video.read())
             temp_file_path = tmp_file.name
         
-        arr = calculate_points_and_plot(temp_file_path)
-        l = np.array(arr).flatten()
-        test = np.hstack((l, calculate_metrics(arr)[0], calculate_metrics(arr)[1], calculate_metrics(arr)[2], calculate_metrics(arr)[3], calculate_metrics(arr)[4], calculate_metrics(arr)[5], calculate_metrics(arr)[6]))
-        res = give_prediction([test])
-        st.image(f"pics/{player_pic_dict[res]}", use_column_width='always')
-        st.title(f"You shoot like {res}")
+        try:
+            arr = calculate_points_and_plot(temp_file_path)
+            l = np.array(arr).flatten()
+            test = np.hstack((l, calculate_metrics(arr)[0], calculate_metrics(arr)[1], calculate_metrics(arr)[2], calculate_metrics(arr)[3], calculate_metrics(arr)[4], calculate_metrics(arr)[5], calculate_metrics(arr)[6]))
+            res = give_prediction([test])
+            st.image(f"pics/{player_pic_dict[res]}", use_column_width='always')
+            st.title(f"You shoot like {res}")
+
+        except Exception as e:
+            st.error("Video did not meet requirements. Please try again.")
 
 if __name__ == "__main__":
     main()

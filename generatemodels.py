@@ -1,31 +1,13 @@
 # All the imports
 import pandas as pd
 import statistics
-import torch
-from torch.utils.data import DataLoader, TensorDataset
-from sklearn.model_selection import train_test_split
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from torch import nn, optim
-import torch.nn.functional as F
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import pairwise_distances
 from joblib import dump, load
-from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.metrics import accuracy_score, mean_squared_error
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.preprocessing import StandardScaler, FunctionTransformer
-from nltk.corpus import wordnet
 import random
-from sklearn.base import BaseEstimator, TransformerMixin
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.neighbors import NearestNeighbors
-from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
-from sklearn.preprocessing import FunctionTransformer
-from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 import warnings
 
 warnings.filterwarnings('ignore')
@@ -129,7 +111,6 @@ def calculate_metrics(data):
   average_slope_change = np.mean(slope_changes)
   metrics.append(average_slope_change)
   return metrics
-
 columns = ['xy', 'xmean', 'ymean', 'xstd', 'ystd', 'xvar', 'yvar','avgdydx', 'Label']
 df = pd.DataFrame(columns=columns)
 for i in range(len(final)):
@@ -144,68 +125,83 @@ yvar_features = df['yvar'].values.reshape(-1, 1)
 avgdydx_features = df['avgdydx'].values.reshape(-1, 1)
 X = np.hstack((flattened_xy_features, xmean_features, ymean_features, xstd_features, ystd_features, xvar_features, yvar_features, avgdydx_features))
 y = df['Label']
-transformer_manhattan = FunctionTransformer(lambda x: np.sum(np.abs(x), axis=1).reshape(-1, 1), validate=True)
-transformer_euclidean = FunctionTransformer(lambda x: x, validate=True)
-transformer_chebyshev = FunctionTransformer(lambda x: np.max(np.abs(x), axis=1).reshape(-1, 1), validate=True)
 
-X_manhattan = transformer_manhattan.fit_transform(X)
-X_euclidean = transformer_euclidean.fit_transform(X)
-X_chebyshev = transformer_chebyshev.fit_transform(X)
+dist_matrix = pairwise_distances(X, metric='euclidean')
+triu_indices = np.triu_indices_from(dist_matrix, k=1)
+pairwise_dists = dist_matrix[triu_indices]
+mean_distance = np.mean(pairwise_dists)
+min_distance = np.min(pairwise_dists)
+max_distance = np.max(pairwise_dists)
+std_distance = np.std(pairwise_dists)
 
-n_clusters = len(np.unique(y)) - 1
-
-kmeans_manhattan = KMeans(n_clusters=n_clusters, random_state=42, n_init=10, algorithm='full', init='k-means++')
-kmeans_euclidean = KMeans(n_clusters=n_clusters, random_state=42, n_init=10, algorithm='full', init='k-means++')
-kmeans_chebyshev = KMeans(n_clusters=n_clusters, random_state=42, n_init=10, algorithm='full', init='k-means++')
-
-y_pred_manhattan = kmeans_manhattan.fit_predict(X_manhattan)
-y_pred_euclidean = kmeans_euclidean.fit_predict(X_euclidean)
-y_pred_chebyshev = kmeans_chebyshev.fit_predict(X_chebyshev)
-
-silhouette_avg_manhattan = silhouette_score(X_manhattan, y_pred_manhattan)
-silhouette_avg_euclidean = silhouette_score(X_euclidean, y_pred_euclidean)
-silhouette_avg_chebyshev = silhouette_score(X_chebyshev, y_pred_chebyshev)
-
-calinski_harabasz_manhattan = calinski_harabasz_score(X_manhattan, y_pred_manhattan)
-calinski_harabasz_euclidean = calinski_harabasz_score(X_euclidean, y_pred_euclidean)
-calinski_harabasz_chebyshev = calinski_harabasz_score(X_chebyshev, y_pred_chebyshev)
-
-davies_bouldin_manhattan = davies_bouldin_score(X_manhattan, y_pred_manhattan)
-davies_bouldin_euclidean = davies_bouldin_score(X_euclidean, y_pred_euclidean)
-davies_bouldin_chebyshev = davies_bouldin_score(X_chebyshev, y_pred_chebyshev)
-
-
-print(f'Silhouette Score for K-Means model with Manhattan distance: {silhouette_avg_manhattan}')
-print(f'Silhouette Score for K-Means model with Euclidean distance: {silhouette_avg_euclidean}')
-print(f'Silhouette Score for K-Means model with Chebyshev distance: {silhouette_avg_chebyshev}')
-
-print(f'Calinski-Harabasz Score for K-Means model with Manhattan distance: {calinski_harabasz_manhattan}')
-print(f'Calinski-Harabasz Score for K-Means model with Euclidean distance: {calinski_harabasz_euclidean}')
-print(f'Calinski-Harabasz Score for K-Means model with Chebyshev distance: {calinski_harabasz_chebyshev}')
-
-print(f'Davies-Bouldin Score for K-Means model with Manhattan distance: {davies_bouldin_manhattan}')
-print(f'Davies-Bouldin Score for K-Means model with Euclidean distance: {davies_bouldin_euclidean}')
-print(f'Davies-Bouldin Score for K-Means model with Chebyshev distance: {davies_bouldin_chebyshev}')
-
-
-dump(kmeans_manhattan, 'models/knn_manhattan.pkl')
-dump(kmeans_euclidean, 'models/knn_euclidean.pkl')
-dump(kmeans_chebyshev, 'models/knn_chebyshev.pkl')
+print("Mean Pairwise Distance:", mean_distance)
+print("Minimum Pairwise Distance:", min_distance)
+print("Maximum Pairwise Distance:", max_distance)
+print("Standard Deviation of Distances:", std_distance)
+knn_euclidean = KNeighborsClassifier(n_neighbors=1, metric='euclidean')
+knn_euclidean.fit(X, y)
+knn_manhattan = KNeighborsClassifier(n_neighbors=1, metric='manhattan')
+knn_manhattan.fit(X, y)
+knn_chebyshev = KNeighborsClassifier(n_neighbors=1, metric='chebyshev')
+knn_chebyshev.fit(X, y)
 
 def give_prediction(test_array):
   options = []
-  prediction1 = kmeans_chebyshev.predict(transformer_chebyshev.fit_transform(test_array))
-  prediction2 = kmeans_euclidean.predict(test_array)
-  prediction3 = kmeans_manhattan.predict(transformer_manhattan.fit_transform(test_array))
+  chosenList = []
+  prediction1 = knn_chebyshev.predict(test_array)
+  prediction2 = knn_euclidean.predict(test_array)
+  prediction3 = knn_manhattan.predict(test_array)
   if prediction1[0] == prediction2[0] and prediction1[0] != prediction3[0]:
     options.append(prediction1[0])
+    chosenList.append("chebyshev")
+    chosenList.append("euclidean")
   elif prediction1[0] == prediction3[0] and prediction1[0] != prediction2[0]:
     options.append(prediction1[0])
+    chosenList.append("chebyshev")
+    chosenList.append("manhattan")
   elif prediction2[0] == prediction3[0] and prediction1[0] != prediction2[0]:
     options.append(prediction2[0])
+    chosenList.append("euclidean")
+    chosenList.append("manhattan")
   else:
     options.append(prediction2[0])
-  return y[options[0]]
+    chosenList.append("euclidean")
+  return options[0], chosenList
+
+def calculate_distance_metric(test_array, X, chosenList):
+  distances_euclidean = pairwise_distances(test_array,  X, metric='euclidean')
+  distances_manhattan = pairwise_distances(test_array, X, metric='manhattan')
+  distances_chebyshev = pairwise_distances(test_array, X, metric='chebyshev')
+
+  min_euc = np.min(distances_euclidean)
+  min_man = np.min(distances_manhattan)
+  min_che = np.min(distances_chebyshev)
+
+  mean_euc = np.mean(distances_euclidean)
+  mean_man = np.mean(distances_manhattan)
+  mean_che = np.mean(distances_chebyshev)
+
+  meanList = []
+  for i in chosenList:
+    if i == "euclidean":
+      meanList.append(min_euc/mean_euc)
+    elif i == "manhattan":
+      meanList.append(min_man/mean_man)
+    elif i == "chebyshev":
+      meanList.append(min_che/mean_che) 
+  
+  meanSum = 0
+  for i in meanList:
+    meanSum += i
+  meanSum /= len(meanList)
+  return meanSum
+chris = [[1.0, 0.0], [0.694989106753813, 0.08669454008853898], [0.44589687726942623, 0.17338908017707821], [0.2628903413217139, 0.249754058042302], [0.140885984023239, 0.3146827348745695], [0.05374001452432821, 0.38108706345302507], [0.007262164124909234, 0.44749139203148053], [0.0, 0.5126660108214461], [0.01960784313725487, 0.5742744712247909], [0.0653594771241829, 0.6309640924741761], [0.1960784313725489, 0.6844564682734874], [0.39288307915758897, 0.7283571077225773], [0.5933188090050835, 0.7741023118544024], [0.7785039941902687, 0.8202164289227742], [0.9317356572258533, 0.8622725036891293], [0.9426289034132173, 0.8991637973438269], [0.9448075526506899, 0.9331037875061485], [0.9389978213507626, 0.9613871126414166], [0.9135802469135803, 0.9833989178553861], [0.8482207697893972, 1.0]]
+clo = np.array(chris).flatten()
+test = np.hstack((clo, calculate_metrics(chris)[0], calculate_metrics(chris)[1], calculate_metrics(chris)[2], calculate_metrics(chris)[3], calculate_metrics(chris)[4], calculate_metrics(chris)[5], calculate_metrics(chris)[6]))
+print(calculate_distance_metric([test], X, give_prediction([test])[1]))
+dump(knn_manhattan, 'models/knn_manhattan.pkl')
+dump(knn_euclidean, 'models/knn_euclidean.pkl')
+dump(knn_chebyshev, 'models/knn_chebyshev.pkl')
 
 
 

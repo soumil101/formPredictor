@@ -40,3 +40,4 @@ urllib3==1.26.15
 wcwidth==0.2.6
 wget==3.2
 widgetsnbextension==4.0.7
+scikit-learn==1.0.2

@@ -6,5 +6,5 @@ Project that finds the relationship between a real-time shot form with NBA playe
 - https://www.kaggle.com/datasets/paultimothymooney/nba-player-shooting-motions?select=path_detail.csv
 
 # Streamlit Front end link:
--https://formpredictor.streamlit.app/
+- https://formpredictor.streamlit.app/
 

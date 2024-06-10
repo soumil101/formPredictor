@@ -1,0 +1,12 @@
+streamlit
+pandas
+numpy
+scikit-learn
+imbalanced-learn
+matplotlib
+opencv-python-headless
+cvzone
+scipy
+joblib
+torch
+nltk

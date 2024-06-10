@@ -8,10 +8,11 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import accuracy_score, classification_report
-from imblearn.over_sampling import RandomOverSampler
+from sklearn.metrics import pairwise_distances
 import matplotlib.pyplot as plt
 import cv2
 import math
+from imblearn.over_sampling import RandomOverSampler
 import cvzone
 from cvzone.ColorModule import ColorFinder
 from scipy.interpolate import interp1d
@@ -35,6 +36,8 @@ knn_euclidean = load('models/knn_euclidean.pkl')
 knn_manhattan = load('models/knn_manhattan.pkl')
 
 player_pic_dict = {
+    'Kobe Bryant': 'kobe.jpeg',
+    'Dirk Nowitzki': 'dirk.jpeg',
     'Kobe Bryant': 'kobe.jpeg',
     'Dirk Nowitzki': 'dirk.jpeg',
     'LeBron James': 'james.jpeg',
@@ -375,6 +378,7 @@ def main():
         plot_shots(scaled_path_detail_df, selected_player1, selected_player2)
 
     st.title("Who do you shoot like?")
+    st.write("Upload a video of your shot and we'll tell you who you shoot like! Please shoot a video with an orange basketball and a white background. Your non-dominant hand should be away from the ball. ")
     st.write("Upload a video of your shot and we'll tell you who you shoot like! Please shoot a video with an orange basketball and a white background. Your non-dominant hand should be away from the ball. ")
     uploaded_video = st.file_uploader("Choose a video...", type=["mp4", "mov"])
 

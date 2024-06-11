@@ -36,42 +36,28 @@ knn_euclidean = load('models/knn_euclidean.pkl')
 knn_manhattan = load('models/knn_manhattan.pkl')
 
 player_pic_dict = {
-    'Kobe Bryant': 'kobe.jpeg',
-    'Dirk Nowitzki': 'dirk.jpeg',
-    'Kobe Bryant': 'kobe.jpeg',
-    'Dirk Nowitzki': 'dirk.jpeg',
+    'Kobe Bryant': 'kobe.jpeg', 
     'LeBron James': 'james.jpeg',
     'Stephen Curry': 'curry.jpeg',
     'Kevin Durant': 'durant.jpeg',
-    'Kawhi Leonard': 'kawhi.jpeg',
     'James Harden': 'harden.jpeg',
-    'Damian Lillard': 'dame.jpeg',
     'Jimmy Butler': 'butler.jpeg',
     'Klay Thompson': 'klay.jpeg',
-    'J.R Smith': 'smith.jpeg',
+    'JR Smith': 'smith.jpeg',
     'Carmelo Anthony': 'carmelo.jpeg',
-    'Russell Westbrook': 'westbrook.jpeg',
     'Kyrie Irving': 'kyrie.jpeg',
     'Paul George': 'george.jpeg',
     'Chris Paul': 'paul.jpeg',
     'Jeremy Lin': 'lin.jpeg',
-    'Draymond Green': 'draymond.jpeg',
     'Danny Green': 'green.jpeg',
     'Derrick Rose': 'rose.jpeg',
     'JJ Redick': 'redick.jpeg',
     'Kyle Korver': 'korver.jpeg',
     'Andre Igoudala': 'iggy.jpeg',
     'Marcus Smart': 'smart.jpeg',
-    'Manu Ginobili': 'manu.jpeg',
+    'Kawhi Leonard' : 'kawhi.jpeg',
 }
 
-player_names = [
-    'Kobe Bryant', 'Dirk Nowitzki', 'Manu Ginobili', 'LeBron James', 'Carmelo Anthony',
-    'Kyle Korver', 'Andre Iguodala', 'JR Smith', 'Chris Paul', 'JJ Redick',
-    'Kevin Durant', 'Derrick Rose', 'Russell Westbrook', 'James Harden', 'Stephen Curry',
-    'Danny Green', 'Paul George', 'Jeremy Lin', 'Kyrie Irving', 'Klay Thompson',
-    'Kawhi Leonard', 'Jimmy Butler', 'Damian Lillard', 'Draymond Green', 'Marcus Smart'
-]
 
 def calculate_metrics(data):
   metrics = []

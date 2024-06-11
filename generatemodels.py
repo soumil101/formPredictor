@@ -23,7 +23,7 @@ for i in range(len(players_ids)):
   s += " "
   s += other_column2_values[0]
   map_pids_to_player[players_ids[i]] = s
-pids_to_use = [201935, 203081, 2594, 2747, 201980, 200755, 201142, 201939, 202331, 2544, 1717, 101108, 201566, 202681, 202691, 202710, 2546, 202695, 202391, 201565, 977, 203110, 203935, 2738, 1938]
+pids_to_use = [201935, 2594, 2747, 201980, 200755, 201142, 201939, 202331, 2544, 101108, 202681, 202691, 202710, 2546, 202695, 202391, 201565, 977, 203935, 2738]
 def take_every_third_and_limit(x):
     return x[::15][:20]  # Takes every third element and limits to the first 100 points
 
@@ -195,10 +195,6 @@ def calculate_distance_metric(test_array, X, chosenList):
     meanSum += i
   meanSum /= len(meanList)
   return meanSum
-chris = [[1.0, 0.0], [0.694989106753813, 0.08669454008853898], [0.44589687726942623, 0.17338908017707821], [0.2628903413217139, 0.249754058042302], [0.140885984023239, 0.3146827348745695], [0.05374001452432821, 0.38108706345302507], [0.007262164124909234, 0.44749139203148053], [0.0, 0.5126660108214461], [0.01960784313725487, 0.5742744712247909], [0.0653594771241829, 0.6309640924741761], [0.1960784313725489, 0.6844564682734874], [0.39288307915758897, 0.7283571077225773], [0.5933188090050835, 0.7741023118544024], [0.7785039941902687, 0.8202164289227742], [0.9317356572258533, 0.8622725036891293], [0.9426289034132173, 0.8991637973438269], [0.9448075526506899, 0.9331037875061485], [0.9389978213507626, 0.9613871126414166], [0.9135802469135803, 0.9833989178553861], [0.8482207697893972, 1.0]]
-clo = np.array(chris).flatten()
-test = np.hstack((clo, calculate_metrics(chris)[0], calculate_metrics(chris)[1], calculate_metrics(chris)[2], calculate_metrics(chris)[3], calculate_metrics(chris)[4], calculate_metrics(chris)[5], calculate_metrics(chris)[6]))
-print(calculate_distance_metric([test], X, give_prediction([test])[1]))
 dump(knn_manhattan, 'models/knn_manhattan.pkl')
 dump(knn_euclidean, 'models/knn_euclidean.pkl')
 dump(knn_chebyshev, 'models/knn_chebyshev.pkl')

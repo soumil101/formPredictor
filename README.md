@@ -8,3 +8,7 @@ Project that finds the relationship between a real-time shot form with NBA playe
 # Streamlit Front end link:
 - https://formpredictor.streamlit.app/
 
+# File Organization Walkthrough
+
+- Shooting Form Data
+  - Stores the dataset
